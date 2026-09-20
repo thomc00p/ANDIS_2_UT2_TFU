@@ -20,6 +20,9 @@ bash demo_script.sh
 # Windows:
 # .\demo_script.ps1
 
+# Solo el escalado explícito de una a tres réplicas:
+python3 demo_scaling.py
+
 # Solo las pruebas (sin reiniciar servicios):
 python3 tests/test_api.py
 # Solo la demo de caída/reinicio:
@@ -28,7 +31,7 @@ python3 demo_resilience.py
 python3 client_test.py
 ```
 
-La demo completa detiene temporalmente una réplica, la restaura y después reinicia la base y las APIs para verificar durabilidad. Esa segunda fase provoca una interrupción planificada; no es una prueba de alta disponibilidad de PostgreSQL. Cada ejecución crea datos nuevos identificados con UUID y no borra datos existentes.
+La demo completa comienza con una sola API y agrega otras dos, verificando 30 lecturas antes y 30 después con el mismo token y saldo. Luego detiene temporalmente una réplica, la restaura y después reinicia la base y las APIs para verificar durabilidad. Esa segunda fase provoca una interrupción planificada; no es una prueba de alta disponibilidad de PostgreSQL. Cada ejecución crea datos nuevos identificados con UUID y no borra datos existentes.
 
 ## Recorrido manual con curl
 
@@ -114,3 +117,9 @@ Nginx resuelve los nombres de las réplicas al arrancar: después de recrearlas,
 - `tests/test_api.py`: pruebas REST de seguridad, transacciones y concurrencia.
 - `demo_resilience.py`: caída de réplica y reinicio con conservación de estado.
 - `docs/validacion.md`: resultados observados de la ejecución local.
+
+## Demo explícita de escalabilidad horizontal
+
+`python3 demo_scaling.py` utiliza `nginx.single.conf` durante la fase inicial y restaura `nginx.conf` para la fase de tres APIs. Comprueba los servicios activos, los identificadores de las réplicas, el saldo compartido y la idempotencia de una recarga creada antes de escalar. Conserva la réplica original y todos los datos. Al salir intenta restaurar la configuración normal, incluso si falla una comprobación. Ejecutarla sin otras demos concurrentes.
+
+La selección del archivo del proxy se realiza con `NGINX_CONF` en Compose. La demo recrea el proxy al cambiar de configuración, por lo que hay una breve interrupción planificada entre fases. Demuestra ampliación manual y distribución de solicitudes, no autoescalado, cero interrupciones ni una mejora de rendimiento medida. Requiere las imágenes construidas previamente con `docker compose build`; el script completo ya realiza ese paso.
